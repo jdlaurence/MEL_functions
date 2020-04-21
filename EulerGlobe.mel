@@ -1,0 +1,270 @@
+/*
+
+Creates a globe with a set of axes driven by JCS data. 
+
+  Written by J.D. Laurence-Chasen
+  last updated 3/28/2020
+*/  
+  
+global proc EulerGlobe()
+{
+    int $height = 160;
+    int $width = 500;
+
+    if (`window -exists globeWindow` == true) deleteUI globeWindow;  
+    
+    string $mainWindow = `window -title "Create Euler Angle Globe"-menuBar true
+    -maximizeButton false -minimizeButton true -sizeable true -resizeToFitChildren false
+    globeWindow`;
+    
+    frameLayout -label "Create Euler Angle Globe" -height $height -width $width -mw 5 -mh 4;
+    columnLayout;
+    textFieldButtonGrp -label "JCS Data Locator" -text "Select locator with JCS Data" 
+            -buttonLabel "Insert Selection" -buttonCommand jcsDataSelect jcsFieldGroup;
+        text "If you've already created a globe, the globe's data will be overwritten";
+    setParent..;
+        text " ";
+        button	-label "Create globe" -enable 1 -w ($width) -command createGlobe;
+        button	-label "Close" -w ($width) closeButton;
+        button -edit -command "deleteUI globeWindow" closeButton;
+    
+    showWindow $mainWindow;
+    window -e -width $width -height $height $mainWindow;
+}
+
+global proc jcsDataSelect()
+{
+	string $objs[] = `ls -sl`;
+	textFieldButtonGrp -e -text $objs[0] jcsFieldGroup;
+}
+
+global proc createGlobe()
+{
+	string $locatorname = `textFieldButtonGrp -q -text jcsFieldGroup`;
+
+    // if a globe already exists, connect new jcs data to controller
+    if( `objExists GlobeController` )
+    {
+           
+        connectAttr -f ($locatorname + ".rotate") GlobeController.rotate;
+
+    } 
+
+    // Else, create globe and connect jcs data
+    else
+    {
+        
+        // create globe camera
+        string $cameraName[] = `camera`;
+        string $cameraShape = $cameraName[1];
+        rename |camera1 "GlobeCam" ;
+        xform -translation 2.75 -2.75 1.4 -rotation 70 0 45;
+        hide GlobeCam;
+                
+        // create globe background plane
+
+	   if(!`objExists backgroundShader`)
+	   {
+		   string $myBlinn = `shadingNode -asShader lambert -n "backgroundShader"`;
+		   sets -renderable true -noSurfaceShader true -empty -name backgroundShaderSG;
+           connectAttr -f backgroundShader.outColor backgroundShaderSG.surfaceShader;
+		   setAttr backgroundShader.color -type double3 0 0 0;
+	    }                                                        
+        polyPlane -sx 1 -sy 1 -w 107 -h 76 -n "backgroundPlane";
+        xform -translation -63 63 -32 -rotation 160 0 45;
+        hyperShade -assign backgroundShader;
+        parent backgroundPlane GlobeCam;                      
+                
+        // create globe controller and groups 
+        spaceLocator -p 0 0 0 -n "GlobeController";
+        hide GlobeController;
+        group -em -n "Globe";
+        group -em -n "LatitudeLines";
+        group - em -n "LongitudeLines";
+        parent LongitudeLines Globe;
+        parent LatitudeLines Globe;
+        parent GlobeController Globe;
+        parent GlobeCam Globe;
+        
+        // create axes using modified axesCreate script
+        axesCreateGlobe("EulerAxes", 2);
+        parent EulerAxes Globe;
+        
+        // connect controller to globe axes i.e. make driver
+        connectAttr -f GlobeController.rotateX EulerAxesX.rotateX;
+        connectAttr -f GlobeController.rotateY EulerAxesX.rotateY;
+        connectAttr -f GlobeController.rotateZ EulerAxesX.rotateZ; 
+        connectAttr -f GlobeController.rotateY EulerAxesY.rotateY;
+        connectAttr -f GlobeController.rotateZ EulerAxesY.rotateZ;
+        connectAttr -f GlobeController.rotateZ EulerAxesZ.rotateZ;
+        
+        //////// CREATE GLOBE  /////////
+        
+        // create longitude lines (currently only 24 are supported)
+        for( $i=0; $i<24; ++$i)
+		{
+		   // create blinn
+		   string $shaderName = "longShader" + $i;
+		   
+		   if(!`objExists $shaderName`)
+		   {
+    		   string $myBlinn = `shadingNode -asShader lambert -n $shaderName`;
+    		   sets -renderable true -noSurfaceShader true -empty -name ($shaderName + "SG");
+               connectAttr -f ($shaderName + ".outColor") ($shaderName + "SG.surfaceShader");
+    		   
+    	    }
+    			// create torus
+    			torus -hr .009 -s 30 -esw 180 -name ("longitude" + $i);
+    			xform -rotation 0 0 (15*$i + 90);
+    			//xform -translation 0 0 100;
+    		  
+    		    // assign blinn			
+            
+            hyperShade -assign $shaderName;
+            setAttr ($shaderName + ".color") -type double3 1 1 0;
+        
+            // set driven keys
+            if ($i < 12) {
+                
+                rotate 0 0 (15*$i - 15) GlobeController;
+                setAttr ($shaderName + ".transparency") -type double3 .8 .8 .8 ;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".transparency");
+                
+                rotate 0 0 (15*$i + 15) GlobeController;
+                setAttr ($shaderName + ".transparency") -type double3 .8 .8 .8 ;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".transparency");
+           
+                rotate 0 0 (15*$i) GlobeController;
+                setAttr ($shaderName + ".transparency") -type double3 0 0 0 ;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".transparency");
+                
+                
+                rotate 0 0 (15*$i - 15) GlobeController;
+                setAttr ($shaderName + ".colorB") 1;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 (15*$i - 7.5) GlobeController;
+                setAttr ($shaderName + ".colorB") 0.25;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 (15*$i + 15) GlobeController;
+                setAttr ($shaderName + ".colorB") 1;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 (15*$i + 7.5) GlobeController;
+                setAttr ($shaderName + ".colorB") 0.25;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 (15*$i) GlobeController;
+                setAttr ($shaderName + ".colorB") 0;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+            }
+            else
+            {
+                
+                rotate 0 0 ((-180 - (180 - (15*$i)))-15) GlobeController;
+                setAttr ($shaderName + ".transparency") -type double3 .8 .8 .8 ;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".transparency");
+                
+                rotate 0 0 ((-180 - (180 - (15*$i)))+15) GlobeController;
+                setAttr ($shaderName + ".transparency") -type double3 .8 .8 .8 ;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".transparency");
+           
+                rotate 0 0 (-180 - (180 - (15*$i))) GlobeController;
+                setAttr ($shaderName + ".transparency") -type double3 0 0 0 ;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".transparency");
+                
+                
+                rotate 0 0 ((-180 - (180 - (15*$i)))-15) GlobeController;
+                setAttr ($shaderName + ".colorB") 1;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 ((-180 - (180 - (15*$i)))-7.5) GlobeController;
+                setAttr ($shaderName + ".colorB") 0.25;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 ((-180 - (180 - (15*$i)))+15) GlobeController;
+                setAttr ($shaderName + ".colorB") 1;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 ((-180 - (180 - (15*$i)))+7.5) GlobeController;
+                setAttr ($shaderName + ".colorB") 0.25;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+                
+                rotate 0 0 (-180 - (180 - (15*$i))) GlobeController;
+                setAttr ($shaderName + ".colorB") 0;
+                setDrivenKeyframe -currentDriver EulerAxesX.rotateZ ($shaderName + ".colorB");
+            }		
+        
+        parent ("longitude" + $i) LongitudeLines;
+        
+        }
+        		
+        // create latitude lines (currently 13 are supported)
+        for( $j=-0.8,$k=0; $j<0.9;$j+=0.2,++$k)
+        {
+		    string $shaderName = "latShader" + $k;
+		    
+		    if(!`objExists $shaderName`)
+		   {
+    		    string $myBlinn = `shadingNode -asShader lambert -n $shaderName`;  
+    		    sets -renderable true -noSurfaceShader true -empty -name ($shaderName + "SG");
+                connectAttr -f ($shaderName + ".outColor") ($shaderName + "SG.surfaceShader");
+		   }
+		   
+			// create torus
+			torus -hr .009 -s 30 -r (sqrt(1 - pow($j,2))) -name ("latitude" + $k);
+			xform -rotation 0 90 0 -translation 0 0 $j;
+			//xform -translation 0 0 100;	
+			
+			hyperShade -assign $shaderName;		
+            setAttr ($shaderName + ".color") -type double3 1 1 0;
+                    
+            parent ("latitude" + $k) LatitudeLines;                        
+               
+            
+                                                        
+            // set driven keys
+            
+            rotate 0 (-(asind($j-0.2))) 0 GlobeController;
+            setAttr ($shaderName + ".transparency") -type double3 .8 .8 .8 ;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".transparency");
+            
+            rotate 0 (-(asind($j+0.2))) 0 GlobeController;
+            setAttr ($shaderName + ".transparency") -type double3 .8 .8 .8 ;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".transparency");
+       
+            rotate 0 (-(asind($j))) 0 GlobeController;
+            setAttr ($shaderName + ".transparency") -type double3 0 0 0 ;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".transparency");
+            
+            
+            
+            rotate 0 (-(asind($j-0.2))) 0 GlobeController;
+            setAttr ($shaderName + ".colorB") 1;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".colorB");
+            
+            rotate 0 (-(asind($j-0.1))) 0 GlobeController;
+            setAttr ($shaderName + ".colorB") 0.25;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".colorB");
+            
+            rotate 0 (-(asind($j+0.2))) 0 GlobeController;
+            setAttr ($shaderName + ".colorB") 1;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".colorB");
+            
+            rotate 0 (-(asind($j+0.1))) 0 GlobeController;
+            setAttr ($shaderName + ".colorB") 0.25;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".colorB");
+            
+            rotate 0 (-(asind($j))) 0 GlobeController;
+            setAttr ($shaderName + ".colorB") 0;
+            setDrivenKeyframe -currentDriver EulerAxesX.rotateY ($shaderName + ".colorB");
+        }
+        
+        connectAttr -f ($locatorname + ".rotate") GlobeController.rotate;
+        select -clear;
+    }
+}
+
+
+		
