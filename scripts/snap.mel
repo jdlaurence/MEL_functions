@@ -1,0 +1,28 @@
+/*
+
+Snaps a child (first selected) to parent (second selected).
+Uses pivot as basis for alignment
+
+  Written by J.D. Laurence-Chasen 12/10/2020
+*/  
+
+
+global proc snap()
+{
+
+$objs = `ls -sl` ;
+if (size($objs) == 2)
+{
+ 
+    // get translation minus rotate pivot
+    float $rotpiv[] = `getAttr ($objs[0] + ".transMinusRotatePivot")`;   
+    
+    // get positions
+    float $pos[] = `xform -q -t -ws ($objs[1])`;
+    
+    // apply to child
+    xform -t ($pos[0]+$rotpiv[0]) ($pos[1]+$rotpiv[1]) ($pos[2]+$rotpiv[2]) -ws ($objs[0]);
+    
+}
+else{print("Error: Select only two objects");}
+}

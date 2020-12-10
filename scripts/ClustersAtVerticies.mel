@@ -1,3 +1,10 @@
+/*
+
+Creates a cluster deformer at every vertex of polygon. 
+
+  Written by J.D. Laurence-Chasen 12/10/2020
+*/  
+
 global proc ClustersAtVerticies()
 {
 
