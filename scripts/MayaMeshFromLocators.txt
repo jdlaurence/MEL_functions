@@ -1,0 +1,53 @@
+/*	HXTElowResMarkerMesh 	Steve Gatesy and David Perry
+	last updated 9/19/17		Create dynamic low-res foot model from animated m locators*/{
+string $data[];
+string $p;
+string $x;
+string $y;
+string $z;
+string $polyname;
+string $first;
+string $second;
+string $third;
+
+string $pointfile = `fileDialog -t "Open lookup table .csv" -dm "*.csv"`;
+$fileId = fopen($pointfile, "r");
+string $nextLine = `fgetline $fileId`;
+
+while ( size( $nextLine ) > 0 )
+    {
+        tokenizeList($nextLine, $data);
+	$p = $data[0];
+		$polyname = "hugo"+$p;
+	$x = $data[1];
+		$first = ("m"+$x);
+	$y = $data[2];
+		$second = ("m"+$y);
+	$z = $data[3];
+		$third = ("m"+$z);
+
+print ($polyname+" "+$first+" "+$second+" "+$third+"\n");
+
+	polyCreateFacet
+	-n $polyname
+	-ch 0
+	-p 0 0 0
+	-p 0 0 0
+	-p 0 0 0;
+
+	connectAttr -force ($first+".translate") ($polyname+"Shape.pnts[0]");
+	connectAttr -force ($second+".translate") ($polyname+"Shape.pnts[1]");
+	connectAttr -force ($third+".translate") ($polyname+"Shape.pnts[2]");
+
+	$nextLine = `fgetline $fileId`;
+    }
+fclose $fileId;
+
+select ("hugo*");
+group -n mpolygonGroup;
+
+polyUnite -ch 1 -mergeUVSets 1 -n mTongueMesh mpolygonGroup;
+
+}
+
+

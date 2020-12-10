@@ -1,0 +1,18 @@
+$obj = `ls -sl` ;
+$nVert = `polyEvaluate -v` ;
+if (size($obj) == 1)
+{
+for( $vert=0; $vert<$nVert[0]; ++$vert)
+    {
+        
+    // select vertex
+    select -r ($obj[0] + ".vtx" + "[" + $vert + "]") ;
+    
+    //make cluster
+    cluster -rel;
+    
+                }
+                
+                select -r $obj;
+                }
+else{print("Error: Select only one object");}

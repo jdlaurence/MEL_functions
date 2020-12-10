@@ -1,0 +1,18 @@
+
+// data node
+spaceLocator -p 0 0 0 -n "gapedata";
+
+// for each frame, calculate rotation, make sure start and end frames are correct!
+for( $frame=1; $frame<362; ++$frame)
+    {
+        
+    currentTime -edit $frame;
+    // make sure these names correspond to the correct variables
+    float $c = `getAttr distanceDimension1.distance`;
+    float $b = `getAttr distanceDimension2.distance`;
+    float $a = `getAttr distanceDimension3.distance`; // gape dist   
+    
+    xform -rotation 0 0 (acosd((pow($b,2) + pow($c,2) - pow($a,2)) / (2*$b*$c))) gapedata;
+        
+    setKeyframe -at "rotate" gapedata;
+                }
