@@ -1,0 +1,54 @@
+/*
+
+Calculates the volume of a polygonal mesh and stores the values to a new locator in the x-axis translation field.
+
+  Written by J.D. Laurence-Chasen 12/11/2020
+*/  
+
+global proc calcPolyVolume()
+{
+
+$objs = `ls -geometry` ;
+	// get frame list (basing it off of all objects in the scene)
+	int $firstframe = `findKeyframe -hi both -which first`;
+	int $lastframe = `findKeyframe -hi both -which last`;
+
+
+// selected poly mesh
+$objs = `ls -sl` ;
+if (size($objs) == 1)
+{
+
+// data node
+if( `objExists ($objs[0] + "_volumedata")` ){}
+else{
+spaceLocator -p 0 0 0 -n ($objs[0] + "_volumedata");
+
+// add volume attribute to locator
+//addAttr -at "float" -ln "PolygonVolume" -sn "polyVol"  ;
+
+}
+
+// temp volume value
+float $vol;
+
+    for ($t=1;$t<101;++$t)
+    {
+        
+        currentTime $t ;
+        select $objs[0] ;
+        $vol = `bt_polyVolumeCalc`;
+        select ($objs[0] + "_volumedata") ;
+        
+        // these lines would set the new attribute
+        //setAttr  ($objs[0] + "_volumedata.polyVol") $vol;
+       //setKeyframe -at "polyVol";
+       
+       //instead lets just set the x-axis translatio value
+       xform -t $vol 0 0;
+       setKeyframe -at "translate" ; 
+    }     
+}
+else{print("Error: Select one poly object");}
+
+}
