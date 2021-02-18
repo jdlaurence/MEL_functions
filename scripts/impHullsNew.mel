@@ -9,28 +9,6 @@ global proc impHullsNew(){
 
 //set up a new namespace for the imported obj
 
-if (`namespace -exists ":hull"`) {
-	//string $oldStuff[] ;
-	//$oldStuff = namespaceInfo -listOnlyDependencyNodes ":hull";
-	//delete ;
-	//namespace -set ":" ;
-	namespace -deleteNamespaceContent -removeNamespace ":hull" ;
-}
-
-if (`namespace -exists "hull"` == false) namespace -add "hull" ;
-
-namespace -set "hull" ;
-
-//Check for (and delete) any old objs, nodes, etc.
-if (`objExists "Alpha*"`) {
-	select -r "Alpha*" ;
-	delete ;
-}
-
-//create locator for volume data
-spaceLocator -n HullVolume ;
-addAttr -ln "Volume"  -at double  -dv 0 hull:HullVolume ;
-setAttr -e-keyable true hull:HullVolume.Volume ;
 
 string $fileList[] = getXrommPointfiles("import .obj files",4,"OBJ files (*.obj)",1);
 
@@ -64,39 +42,30 @@ for ($file in $fileList)
 	} 
 	fclose $fileId ;
 
-	// key volume value
-	currentTime -edit $frameNumber ;
-	select -r hull:HullVolume ;
-	setKeyframe -at Volume -v $volumeHull -t $frameNumber hull:HullVolume ;
-	print ("frame "+$frameNumber +": volume = "+$volumeHull +"\n");
-
 	//key visibility of hull objs
 	string $selectedHull[];
-	select -r ("hull:Alpha_" + $frameNumber + "_Hull");
+	select -r ("|Alpha_" + $frameNumber + "_Hull");
 	$selectedHull = `ls -sl` ;
 	int $prevFrame = $frameNumber-1 ;
 	int $nextFrame = $frameNumber+1 ;
 	currentTime -edit $prevFrame ;
-	setAttr ("hull:Alpha_" + $frameNumber + "_Hull.visibility") 0;
+	setAttr ("|Alpha_" + $frameNumber + "_Hull.visibility") 0;
 	setKeyframe $selectedHull ;
 	currentTime -edit $frameNumber ;
 	setKeyframe -v 1 -at visibility $selectedHull ;
 	currentTime -edit $nextFrame ;
-	setAttr ("hull:Alpha_" + $frameNumber + "_Hull.visibility") 0;
+	setAttr ("|Alpha_" + $frameNumber + "_Hull.visibility") 0;
 	setKeyframe $selectedHull ;
 
     }
 //create group for hull objs
 
 string $selectedObjects[] ;
-select -r "hull:Alpha*" ;
-select -d -hi "hull:AlphaHulls*" ;
+select -r "Alpha*" ;
+if (`objExists "AlphaHulls*"`) {
+	select -d -hi "AlphaHulls*" ;
+}
 $selectedObjects = `ls -sl` ;
 group -n "AlphaHulls" $selectedObjects ;
-
-//set current namespace back to root
-//(so you don’t accidentally create any undetectable objects in :hull)
-
-namespace -set ":" ;
 
 }
