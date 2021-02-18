@@ -1,0 +1,6 @@
+/*
+
+Creates a shader that changes color (red channel) based on values stored on the X-translation channel on the selected locator
+
+  Written by J.D. Laurence-Chasen 2/16/2020
+*/  
