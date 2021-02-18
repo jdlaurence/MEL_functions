@@ -1,0 +1,102 @@
+global proc impHullsNew(){
+
+//script should:
+	//1. import obj file
+	//2. set keys so each obj is only visible for its frame
+	//3. group all obj files, create “volume” attribute for group, key volume values at each frame
+
+// UPDATED AS OF 2/18/2020 By J.D. Laurence-Chasen to work with Frozen Endocast
+
+//set up a new namespace for the imported obj
+
+if (`namespace -exists ":hull"`) {
+	//string $oldStuff[] ;
+	//$oldStuff = namespaceInfo -listOnlyDependencyNodes ":hull";
+	//delete ;
+	//namespace -set ":" ;
+	namespace -deleteNamespaceContent -removeNamespace ":hull" ;
+}
+
+if (`namespace -exists "hull"` == false) namespace -add "hull" ;
+
+namespace -set "hull" ;
+
+//Check for (and delete) any old objs, nodes, etc.
+if (`objExists "Alpha*"`) {
+	select -r "Alpha*" ;
+	delete ;
+}
+
+//create locator for volume data
+spaceLocator -n HullVolume ;
+addAttr -ln "Volume"  -at double  -dv 0 hull:HullVolume ;
+setAttr -e-keyable true hull:HullVolume.Volume ;
+
+string $fileList[] = getXrommPointfiles("import .obj files",4,"OBJ files (*.obj)",1);
+
+// Importing obj files
+// (copied from impObjs.mel)
+for ($file in $fileList)
+    {   	
+    	// create a name for the new object and make sure its valid
+    	string $objname = basename($file,".obj");
+    	$objname = cleanStrForObjectName($objname);
+        string $newObjs[] = `file -import -type "OBJ" -ra  0 -rnn -options "mo=0" -loadReferenceDepth "all" $file`;
+        string $justTforms[] = `ls -tr $newObjs`;
+        rename  $justTforms[0] $objname;
+
+	$fileId = fopen($file, "r") ;
+	float $volumeHull ;
+	int $frameNumber ;
+	for ($i = 1; $i < 4; $i++)
+	{
+		string $line = `fgetline $fileId`;
+		if( $i == 2)
+			{
+			$volumeHull = $line ;
+			}
+		else if ($i == 3)
+			{
+			$frameNumber = $line ;
+			}
+		else
+			;
+	} 
+	fclose $fileId ;
+
+	// key volume value
+	currentTime -edit $frameNumber ;
+	select -r hull:HullVolume ;
+	setKeyframe -at Volume -v $volumeHull -t $frameNumber hull:HullVolume ;
+	print ("frame "+$frameNumber +": volume = "+$volumeHull +"\n");
+
+	//key visibility of hull objs
+	string $selectedHull[];
+	select -r ("hull:Alpha_" + $frameNumber + "_Hull");
+	$selectedHull = `ls -sl` ;
+	int $prevFrame = $frameNumber-1 ;
+	int $nextFrame = $frameNumber+1 ;
+	currentTime -edit $prevFrame ;
+	setAttr ("hull:Alpha_" + $frameNumber + "_Hull.visibility") 0;
+	setKeyframe $selectedHull ;
+	currentTime -edit $frameNumber ;
+	setKeyframe -v 1 -at visibility $selectedHull ;
+	currentTime -edit $nextFrame ;
+	setAttr ("hull:Alpha_" + $frameNumber + "_Hull.visibility") 0;
+	setKeyframe $selectedHull ;
+
+    }
+//create group for hull objs
+
+string $selectedObjects[] ;
+select -r "hull:Alpha*" ;
+select -d -hi "hull:AlphaHulls*" ;
+$selectedObjects = `ls -sl` ;
+group -n "AlphaHulls" $selectedObjects ;
+
+//set current namespace back to root
+//(so you don’t accidentally create any undetectable objects in :hull)
+
+namespace -set ":" ;
+
+}
