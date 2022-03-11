@@ -1,0 +1,81 @@
+/*
+
+Creates a 7-marker tongue mesh for animating
+
+  Written by J.D. Laurence-Chasen 1/25/2022
+  
+*/  
+global proc create7MarkerTongueRig(string $name)
+{
+
+    $polyname = $name;
+
+	polyCreateFacet
+	-n ($polyname + "Face1")
+	-ch 0
+	-p 5.196 -1.150 -0.060
+	-p 4.316 -1.071 0.741
+	-p 3.433 -0.695 -0.106;
+	
+	polyCreateFacet
+	-n ($polyname + "Face2")
+	-ch 0
+	-p 5.196 -1.150 -0.060
+	-p 3.433 -0.695 -0.106
+	-p 4.281 -0.931 -0.841;
+	
+	polyCreateFacet
+	-n ($polyname + "Face3")
+	-ch 0
+	-p 4.316 -1.071 0.741
+	-p 2.625 -1.322 0.861
+	-p 3.433 -0.695 -0.106;
+	
+	polyCreateFacet
+	-n ($polyname + "Face4")
+	-ch 0
+	-p 4.281 -0.931 -0.841
+	-p 3.433 -0.695 -0.106
+	-p 2.473 -1.007 -0.900;
+	
+	polyCreateFacet
+	-n ($polyname + "Face5")
+	-ch 0
+	-p 3.433 -0.695 -0.106
+	-p 2.625 -1.322 0.861
+	-p 0.745 -1.152 0.078;
+	
+	polyCreateFacet
+	-n ($polyname + "Face6")
+	-ch 0
+	-p 3.433 -0.695 -0.106
+	-p 0.745 -1.152 0.078
+	-p 2.473 -1.007 -0.900;
+
+select ($polyname+"*");
+group -n $polyname;
+$meshname = ($polyname + "rig");
+polyUnite -ch 1 -mergeUVSets 1 -n $meshname $polyname;
+polyMergeVertex;
+select $meshname;
+DeleteHistory;
+polyNormal -normalMode 0 -userNormalMode 0 -ch 1 $meshname;
+DeleteHistory;
+
+float $nVert[] = {7};
+string $clusternames[] = {"_antM_", "_antR_", "_midM_", "_antL_", "_midR_", "_midL_", "_posM_"};
+for( $vert=0; $vert<$nVert[0]; ++$vert)
+    {
+        
+    // select vertex
+    select -r ($meshname + ".vtx" + "[" + $vert + "]") ;
+    //make cluster
+    cluster -rel -name ($meshname + $clusternames[$vert]);
+    
+                }
+
+
+
+}
+
+

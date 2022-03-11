@@ -5,13 +5,13 @@ Calculates the volume of a polygonal mesh and stores the values to a new locator
   Written by J.D. Laurence-Chasen 12/11/2020
 */  
 
-global proc calcPolyVolume()
+global proc calcPolyVolume(int $firstframe, int $lastframe)
 {
 
 $objs = `ls -geometry` ;
 	// get frame list (basing it off of all objects in the scene)
-	int $firstframe = `findKeyframe -hi both -which first`;
-	int $lastframe = `findKeyframe -hi both -which last`;
+	//int $firstframe = `findKeyframe -hi both -which first`;
+	//int $lastframe = `findKeyframe -hi both -which last`;
 
 
 // selected poly mesh
@@ -32,7 +32,7 @@ spaceLocator -p 0 0 0 -n ($objs[0] + "_volumedata");
 // temp volume value
 float $vol;
 
-    for ($t=1;$t<101;++$t)
+    for ($t=$firstframe;$t<($lastframe+1);++$t)
     {
         
         currentTime $t ;
@@ -44,7 +44,7 @@ float $vol;
         //setAttr  ($objs[0] + "_volumedata.polyVol") $vol;
        //setKeyframe -at "polyVol";
        
-       //instead lets just set the x-axis translatio value
+       //instead lets just set the x-axis translation value
        xform -t $vol 0 0;
        setKeyframe -at "translate" ; 
     }     

@@ -1,0 +1,157 @@
+/*
+
+Creates driveable bolus silhouette rig
+
+  Written by J.D. Laurence-Chasen 3/10/2022
+*/  
+
+global proc createBolusRig()
+{
+
+$objs = `ls -sl` ;
+
+if (size($objs) == 2) // check to make sure two objs are selected
+{
+
+$bolusctrl = ($objs[0] + "_rig") ; // this will be the controller
+$bolus = $objs[0] ;  // this will be the actual bolus model
+$cameraplane = $objs[1];
+
+select -r $bolus; // select bolus mesh only
+DeleteHistory; // delete history
+
+
+duplicate -rr -name $bolusctrl; // duplicate
+delete $bolus;
+select -r $bolusctrl; // select bolus mesh only
+$nVert = `polyEvaluate -v` ; // how many verticies?
+
+// create groups for organization
+string $controllergroup = ($bolusctrl + "_controllers");
+string $clustergroup = ($bolusctrl + "_clusters");
+group -empty -name $controllergroup;
+group -empty -name $clustergroup;
+
+
+// This first for loop is for setting up the bolus model controller
+for( $vert=0; $vert<$nVert[0]; ++$vert)
+    {
+        
+    // select vertex and get position
+    select -r ($bolusctrl + ".vtx" + "[" + $vert + "]") ;
+    $vertpos = pointPosition ($bolusctrl + ".vtx" + "[" + $vert + "]");
+    
+    //make vertex cluster and hide it
+    string $clustername = ($bolusctrl + "vert" + $vert + "Cluster");
+    cluster -rel -name $clustername;
+    $clustername = ($clustername + "Handle");
+    hide $clustername;
+    
+    // make controller (will be visible)
+    string $controllername = ($bolusctrl + "vert" + $vert + "Control");
+    spaceLocator -p 0 0 0 -name $controllername;
+    xform -scale .25 .25 .25 $controllername;
+    xform -translation $vertpos[0] $vertpos[1] $vertpos[2] $controllername;
+    
+    // make cluster position locator (not visible)
+    string $controllername2 = ($bolusctrl + "vert" + $vert + "ImagePlanePosition");
+    spaceLocator -p 0 0 0 -name $controllername2;
+   
+    
+    // Make closest point node
+    // this will enable us to contrain the polygon's vertices to the image plane
+    string $nodename =  ($bolusctrl + "vert" + $vert + "cposNode");
+    createNode "closestPointOnSurface" -name $nodename;
+    
+    // connect node to camera plane and controller
+    connectAttr -force ($cameraplane + ".worldSpace[0]") ($nodename + ".inputSurface");
+    connectAttr -force ($nodename + ".result.position") ($controllername2 + ".translate"); 
+    connectAttr -force ($controllername + ".translate") ($nodename + ".inPosition");
+    select $controllername2 $clustername;
+    pointConstraint;
+    select $controllername $controllername2;
+    snap;
+    hide $controllername2;
+    
+    parent $controllername2 $clustername $clustergroup;
+    parent $controllername $controllergroup;
+                }
+
+// set up actual bolus model (the one that will be in the capture volume)
+select -r $bolusctrl;
+duplicate -name $bolus $bolusctrl; 
+// get pivot orientation for extrusion
+$camposname = `listRelatives -parent $cameraplane`;
+$camtrans = `xform -q -ws -translation $camposname`;
+$camrot = `xform -q -ws -rotation $camposname`;
+selectMode -component ;
+// extrude out the polygon so it becomes 3D
+select -r ($bolusctrl + ".f[0]") ;
+$exnodename = `polyExtrudeFacet -constructionHistory 1 -keepFacesTogether 1 -pvx $camrot[0] -pvy $camrot[1] -pvz $camrot[2] -divisions 1 -twist 0 -taper 1 -off 0 -thickness 0 -smoothingAngle 30 ($bolus + ".f[0]")`;  
+setAttr ($exnodename[0] + ".localTranslate") -type double3 0 0 -5; // arbitrary amount
+select -r $bolus;
+selectMode -object;;
+polyTriangulate -ch 1 $bolus;
+DeleteHistory;
+
+// Iterate through verticies again, this time, connecting controller to actual, and placed extruded vertices at camera position
+for( $vert=0; $vert<$nVert[0]; ++$vert)
+    {             
+    
+    // select vertex and get position
+    select -r ($bolus + ".vtx" + "[" + $vert + "]") ;
+    $vertpos = pointPosition ($bolus + ".vtx" + "[" + $vert + "]");
+    
+    //make vertex cluster and hide it
+    $clustername = ($bolusctrl + "vert" + $vert + "Cluster");
+    $clustername2 = ($bolus + "vert" + $vert + "Cluster");
+    cluster -rel -name $clustername2;
+    $clustername2 = ($clustername2 + "Handle");
+    hide $clustername2;
+    
+    // make driver (will not be visible)
+    $drivername = ($bolus + "vert" + $vert + "Driver");
+    spaceLocator -p 0 0 0 -name $drivername;
+    xform -translation $vertpos[0] $vertpos[1] $vertpos[2] $drivername;
+    hide $drivername;
+    
+    // set up mesh rig to drive the newley extruded model
+    $controllername2 = ($bolusctrl + "vert" + $vert + "ImagePlanePosition");
+    connectAttr -force ($controllername2 + ".translate") ($drivername + ".translate");
+    select $drivername $clustername2;
+    pointConstraint;
+    parent $drivername $clustername2 $clustergroup;
+
+     // set proximal face vertex position to camera position             
+    $newvert = $vert + $nVert[0]; // vertex of the extruded edge                
+    select -r ($bolus + ".vtx" + "[" + $newvert + "]") ;
+   // //make vertex cluster and hide it
+    $clustername = ($bolus + "vert" + $newvert + "Cluster");
+    cluster -rel -name $clustername;
+    $clustername = ($clustername + "Handle");
+    hide $clustername;    
+    select $camposname $clustername;
+    pointConstraint;
+    parent $clustername $clustergroup;
+                }
+                
+    // reverse normals
+    polyNormal -normalMode 0 -userNormalMode 0 -ch 1 $bolus;
+    
+    select -clear ;
+ }      
+else{print("Error: Select two objects (poly object and camera plane)");}
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
