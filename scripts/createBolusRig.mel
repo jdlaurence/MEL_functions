@@ -28,7 +28,7 @@ $nVert = `polyEvaluate -v` ; // how many verticies?
 
 // create groups for organization
 string $controllergroup = ($bolusctrl + "_controllers");
-string $clustergroup = ($bolusctrl + "_clusters");
+string $clustergroup = ($bolusctrl + "_clusters_DONTEDIT");
 group -empty -name $controllergroup;
 group -empty -name $clustergroup;
 
@@ -137,7 +137,7 @@ for( $vert=0; $vert<$nVert[0]; ++$vert)
                 
     // reverse normals
     polyNormal -normalMode 0 -userNormalMode 0 -ch 1 $bolus;
-    
+    parent $clustergroup $controllergroup;
     select -clear ;
  }      
 else{print("Error: Select two objects (poly object and camera plane)");}
