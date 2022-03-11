@@ -138,6 +138,27 @@ for( $vert=0; $vert<$nVert[0]; ++$vert)
     // reverse normals
     polyNormal -normalMode 0 -userNormalMode 0 -ch 1 $bolus;
     parent $clustergroup $controllergroup;
+    
+    // lock transform attributes     
+    setAttr -lock true ($bolus + ".tx");
+    setAttr -lock true ($bolus + ".ty");
+    setAttr -lock true ($bolus + ".tz");
+    setAttr -lock true ($bolus + ".rx");
+    setAttr -lock true ($bolus + ".ry");
+    setAttr -lock true ($bolus + ".rz");
+    setAttr -lock true ($bolus + ".sx");
+    setAttr -lock true ($bolus + ".sy");
+    setAttr -lock true ($bolus + ".sz");
+    setAttr -lock true ($bolusctrl + ".tx");
+    setAttr -lock true ($bolusctrl + ".ty");
+    setAttr -lock true ($bolusctrl + ".tz");
+    setAttr -lock true ($bolusctrl + ".rx");
+    setAttr -lock true ($bolusctrl + ".ry");
+    setAttr -lock true ($bolusctrl + ".rz");
+    setAttr -lock true ($bolusctrl + ".sx");
+    setAttr -lock true ($bolusctrl + ".sy");
+    setAttr -lock true ($bolusctrl + ".sz");
+
     select -clear ;
  }      
 else{print("Error: Select two objects (poly object and camera plane)");}
