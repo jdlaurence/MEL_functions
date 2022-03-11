@@ -1,6 +1,16 @@
 /*
 
-Creates driveable bolus silhouette rig
+createBolusRig: Automatically generate a rig for 3D bolus tracking and reconstrution.
+
+requires: 1) MayaCams/images imported
+          2) A 2D bolus shape, created with "Create Polygon" tool drawn in a MayaCam
+          
+ 
+
+Usage: To use, shift select bolus polygon, then MayaCam plane (the video image)
+then simply run createBolusRig; in the MEL command line.
+
+For full details, see documentation (TO BE WRITTEN).
 
   Written by J.D. Laurence-Chasen 3/10/2022
 */  
@@ -19,10 +29,8 @@ $cameraplane = $objs[1];
 
 select -r $bolus; // select bolus mesh only
 DeleteHistory; // delete history
+rename $bolus $boluscontrol; // rename
 
-
-duplicate -rr -name $bolusctrl; // duplicate
-delete $bolus;
 select -r $bolusctrl; // select bolus mesh only
 $nVert = `polyEvaluate -v` ; // how many verticies?
 
@@ -37,17 +45,17 @@ group -empty -name $clustergroup;
 for( $vert=0; $vert<$nVert[0]; ++$vert)
     {
         
-    // select vertex and get position
+    // select single vertex and get position
     select -r ($bolusctrl + ".vtx" + "[" + $vert + "]") ;
     $vertpos = pointPosition ($bolusctrl + ".vtx" + "[" + $vert + "]");
     
-    //make vertex cluster and hide it
+    //make vertex cluster (for control) and hide it
     string $clustername = ($bolusctrl + "vert" + $vert + "Cluster");
     cluster -rel -name $clustername;
     $clustername = ($clustername + "Handle");
     hide $clustername;
     
-    // make controller (will be visible)
+    // make controller locator (will be visible)
     string $controllername = ($bolusctrl + "vert" + $vert + "Control");
     spaceLocator -p 0 0 0 -name $controllername;
     xform -scale .25 .25 .25 $controllername;
@@ -60,24 +68,28 @@ for( $vert=0; $vert<$nVert[0]; ++$vert)
     
     // Make closest point node
     // this will enable us to contrain the polygon's vertices to the image plane
+    // If the user only translates the controls in the plane of the mayacam, this isn't strictly necessary.
     string $nodename =  ($bolusctrl + "vert" + $vert + "cposNode");
     createNode "closestPointOnSurface" -name $nodename;
     
-    // connect node to camera plane and controller
-    connectAttr -force ($cameraplane + ".worldSpace[0]") ($nodename + ".inputSurface");
-    connectAttr -force ($nodename + ".result.position") ($controllername2 + ".translate"); 
-    connectAttr -force ($controllername + ".translate") ($nodename + ".inPosition");
+    // connect closest point node to camera plane and controller
+    connectAttr -force ($cameraplane + ".worldSpace[0]") ($nodename + ".inputSurface"); // have camera plane be the constraint
+    connectAttr -force ($nodename + ".result.position") ($controllername2 + ".translate"); // have the output of the node drive the hidden controller
+    connectAttr -force ($controllername + ".translate") ($nodename + ".inPosition"); // have the visible controller be the input to the node
     select $controllername2 $clustername;
-    pointConstraint;
-    select $controllername $controllername2;
-    snap;
-    hide $controllername2;
+    pointConstraint; // the lock the cluster (vertex) to the hidden controller
     
+    // bring the visible control to the same position as the invis, for easy of use
+    select $controllername $controllername2;
+    snap; 
+    
+    //clean up
+    hide $controllername2;
     parent $controllername2 $clustername $clustergroup;
     parent $controllername $controllergroup;
                 }
 
-// set up actual bolus model (the one that will be in the capture volume)
+// Now set up the actual bolus model (the one that will be in the capture volume)
 select -r $bolusctrl;
 duplicate -name $bolus $bolusctrl; 
 // get pivot orientation for extrusion
@@ -139,7 +151,7 @@ for( $vert=0; $vert<$nVert[0]; ++$vert)
     polyNormal -normalMode 0 -userNormalMode 0 -ch 1 $bolus;
     parent $clustergroup $controllergroup;
     
-    // lock transform attributes     
+    // lock transform attributes so user doesn't accidentially move    
     setAttr -lock true ($bolus + ".tx");
     setAttr -lock true ($bolus + ".ty");
     setAttr -lock true ($bolus + ".tz");
