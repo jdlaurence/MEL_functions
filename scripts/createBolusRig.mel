@@ -29,7 +29,7 @@ $cameraplane = $objs[1];
 
 select -r $bolus; // select bolus mesh only
 DeleteHistory; // delete history
-rename $bolus $boluscontrol; // rename
+rename $bolus $bolusctrl; // rename
 
 select -r $bolusctrl; // select bolus mesh only
 $nVert = `polyEvaluate -v` ; // how many verticies?
