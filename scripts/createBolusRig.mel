@@ -151,7 +151,7 @@ for( $vert=0; $vert<$nVert[0]; ++$vert)
     polyNormal -normalMode 0 -userNormalMode 0 -ch 1 $bolus;
     parent $clustergroup $controllergroup;
     
-    // lock transform attributes so user doesn't accidentially move    
+    // lock transform attributes so user doesn't accidentally move    
     setAttr -lock true ($bolus + ".tx");
     setAttr -lock true ($bolus + ".ty");
     setAttr -lock true ($bolus + ".tz");
