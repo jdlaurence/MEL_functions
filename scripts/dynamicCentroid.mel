@@ -1,0 +1,72 @@
+/* global proc dynamicCentroid()
+
+   Separates polygon into unconnected components and calculates the centroid of each isolated object.  
+   Written by J.D. Laurence-Chasen 7/19/2022
+*/
+global proc dynamicCentroid()
+{
+	if (`window -exists dynCntCalcWindow` == true) deleteUI dynCntCalcWindow;  
+
+	int $height = 170;
+	int $width = 320;
+
+	string $mainWindow = `window -title "Dynamic Centroid" -menuBar true
+		-maximizeButton false -minimizeButton true -sizeable false
+		-resizeToFitChildren false dynCntCalcWindow`;
+		
+	frameLayout -label "Calculate Dynamic Centroid" -height $height -width $width -mw 5 -mh 5;
+		columnLayout;
+		columnLayout;
+		text " ";
+		text "Select Mesh and Set frame range for calculation.";
+		text " ";
+		textFieldGrp -label "End Frame" -text "100" -cw 1 ($width*.2) frameend;	
+		button	-label "Calculate Dynamic Centroid" -w ($width-20) -command dynCntCalc;
+		button	-label "Close" -w ($width-20) closeButton;
+		button -edit -command "deleteUI dynCntCalcWindow; selectMode -o" closeButton;
+
+	showWindow $mainWindow;
+	window -e -h $height -w $width dynCntCalcWindow;
+}
+				
+global proc string dynCntCalc(int $frameend)
+{
+	// get frame range
+	//int $fr_start = int($framstart);
+	//int $fr_end = int($framstart);
+	
+	int $framestart = 1;
+	currentTime $framestart;
+	// get selected object
+	string $objs[] = `ls -sl`;
+	$obj = $objs[0];
+	
+	// get number of vertices
+	int $count[] = `polyEvaluate -v $obj`;
+	
+	// create space locator 
+	string $truename[] = `spaceLocator -n ($obj+"_Centroid")`;
+	
+	for ($f = $framestart; $f<$frameend+1; $f++)
+	{
+    	playbackOptions -min $f -max ($f+1) -l "once";
+        play -f 1;
+    	pause -sec 1;
+    	vector $sum = {0.0,0.0,0.0};
+    	vector $curVtx;
+    	
+    	for ($i = 0; $i<$count[0]; $i++)
+        	{
+        		$curVtx = `xform -q -ws -t ($obj+".vtx["+$i+"]")`;
+        		$sum = ($sum + $curVtx);
+        	}
+    	
+    	vector $avg = $sum/$count[0];
+    	
+    	//place a locator    
+    	xform -ws -t ($avg.x) ($avg.y) ($avg.z) $truename[0];
+    	setKeyframe -at "translate" $truename[0]; 
+
+       }
+    playbackOptions -min $framestart -max ($frameend) -l "once";
+}
