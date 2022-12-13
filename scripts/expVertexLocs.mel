@@ -1,0 +1,75 @@
+/* global proc expVertexLocs()
+
+   Exports XYZ positions of verticies of a mesh/meshes to a csv file.
+   Written by J.D. Laurence-Chasen 2022
+   
+*/
+global proc expVertexLocs()
+{
+	if (`window -exists expVertexWindow` == true) deleteUI expVertexWindow;  
+
+	int $height = 150;
+	int $width = 320;
+
+	string $mainWindow = `window -title "expVertexLocs" -menuBar true
+		-maximizeButton false -minimizeButton true -sizeable false
+		-resizeToFitChildren false expVertexWindow`;
+		
+	frameLayout -label "Export Vertex Locations" -height $height -width $width -mw 5 -mh 5;
+		columnLayout;
+		columnLayout;
+		text " ";
+		text "Select the mesh (or meshes).";
+		text " ";
+			
+		button	-label "Export Vertex Locations" -w ($width-20) -command expVerts;
+		button	-label "Close" -w ($width-20) closeButton;
+		button -edit -command "deleteUI expVertexWindow; selectMode -o" closeButton;
+
+	showWindow $mainWindow;
+	window -e -h $height -w $width expVertexWindow;
+}
+
+
+				
+global proc expVerts()
+{
+  
+   
+   // set filename
+   string $filename[] = getXrommPointfiles("Save as", 0, "CSV file (*.csv)", 1);
+   int $fileId;
+   
+   // get selected objects
+   string $selobj[] = `ls -sl`;
+   
+	// open output file
+	$fileId = `fopen $filename[0] "w"`;
+	
+	// first row
+	fprint $fileId "model,x,y,z";
+	fprint $fileId "\n";
+	
+	// for each object
+	for ($s in $selobj)
+		{
+	    int $count[] = `polyEvaluate -v $s`;
+	    vector $curVtx;
+	    
+	   // for each vertex
+    	for ($i = 0; $i<$count[0]; $i++)
+    	{
+    	    // get vertex x,y,z
+    		$curVtx = `xform -q -ws -t ($s+".vtx["+$i+"]")`;
+        
+        // add to csv file
+    		string $vtxStr = floatArrayToString($curVtx,",");
+        fprint $fileId ($s+","+$vtxStr);
+        fprint $fileId "\n";
+    	}
+	
+    }
+	fclose $fileId;
+	print ("\/\/Export "+$filename[0]+" complete.\n");
+   
+}
