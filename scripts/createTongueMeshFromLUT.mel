@@ -1,0 +1,80 @@
+/*	createTongueMeshFromLUT
+    
+    Input:
+    prefix: prefix for the relevant markers (i.e. "m" if markers are named m0, m1, m2, m3
+    name: name for ultimate mesh object (must have unique prefix! i.e. tongue_mesh3)
+    
+    Lookup Table Format:
+    4 columns, where first col is polygon number (0:x) and cols are the three vertex objects in order. 
+    To keep the normals facing the same way, list the vertices in a consistent direction (clockwise or counterclockwise)
+    
+    e.g. 
+    
+    0	0	1	2
+    1	2	1	3
+    2	2	3	4
+    3	2	4	5
+    4	5	4	6
+    
+    Based on script by
+    Steve Gatesy and David Perry
+	9/19/17
+	
+	Adapted by
+	J.D. Laurence-Chasen 
+    2/1/2023
+	
+	Create dynamic low-res mesh based on a Lookup Table of polygon verticies
+*/
+
+global proc createTongueMeshFromLUT(string $prefix, string $name)
+{
+string $data[];
+string $p;
+string $x;
+string $y;
+string $z;
+string $polyname;
+string $first;
+string $second;
+string $third;
+
+string $pointfile = `fileDialog -t "Open lookup table .csv" -dm "*.csv"`;
+$fileId = fopen($pointfile, "r");
+string $nextLine = `fgetline $fileId`;
+
+while ( size( $nextLine ) > 0 )
+    {
+        tokenizeList($nextLine, $data);
+	$p = $data[0];
+		$polyname = $name+$p;
+	$x = $data[1];
+		$first = ($prefix+$x);
+	$y = $data[2];
+		$second = ($prefix+$y);
+	$z = $data[3];
+		$third = ($prefix+$z);
+
+    print ($polyname+" "+$first+" "+$second+" "+$third+"\n");
+
+	polyCreateFacet
+	-n $polyname
+	-ch 0
+	-p 0 0 0
+	-p 0 0 0
+	-p 0 0 0;
+
+	connectAttr -force ($first+".translate") ($polyname+"Shape.pnts[0]");
+	connectAttr -force ($second+".translate") ($polyname+"Shape.pnts[1]");
+	connectAttr -force ($third+".translate") ($polyname+"Shape.pnts[2]");
+
+	$nextLine = `fgetline $fileId`;
+    }
+fclose $fileId;
+
+select ($name+"*");
+group -n mpolygonGroup;
+
+polyUnite -ch 1 -mergeUVSets 1 -n $name mpolygonGroup;
+polyMergeVertex  -d 0.001 -am 1 -ch 1 $name;
+}

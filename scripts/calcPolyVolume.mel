@@ -1,6 +1,8 @@
 /*
 
 Calculates the volume of a polygonal mesh and stores the values to a new locator in the x-axis translation field.
+  
+  Requires Maya Bonus Tools installed, with Volume functions loaded (in plug-in manager)
 
   Written by J.D. Laurence-Chasen 12/11/2020
 */  
